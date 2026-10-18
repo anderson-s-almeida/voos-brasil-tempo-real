@@ -1,0 +1,41 @@
+table dim_companhia
+	lineageTag: bd8749e6-0bf0-4e10-b56c-5b6e40259106
+
+	column prefixo
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 2e84f447-0b4a-48d3-a0a4-b0ec031c42d6
+		summarizeBy: none
+		sourceColumn: prefixo
+
+		annotation SummarizationSetBy = Automatic
+
+	column companhia
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 2efeaf87-20a1-4d97-8eb3-37320e860993
+		summarizeBy: none
+		sourceColumn: companhia
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: c187d71b-8848-4219-b560-fe429c422ce8
+		summarizeBy: none
+		sourceColumn: tipo
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_companhia = m
+		mode: directQuery
+		source =
+				let
+				    Fonte = DatabricksMultiCloud.Catalogs("dbc-eb71337e-4cba.cloud.databricks.com", "/sql/1.0/warehouses/2acace36d690c6ad", [Catalog="workspace", Database="voos_gold", QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    dim_companhia_voos_gold_workspace_Table = Fonte{[Item="dim_companhia",Schema="voos_gold",Catalog="workspace",Kind="Table"]}[Data]
+				in
+				    dim_companhia_voos_gold_workspace_Table
+
+	annotation PBI_ResultType = Table
+

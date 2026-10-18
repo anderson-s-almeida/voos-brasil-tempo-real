@@ -1,0 +1,116 @@
+table resumo_coleta
+	lineageTag: 64645829-e868-4360-a68c-6863b554481c
+
+	column coleta_brt
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 9352fa17-2ea9-42d6-9ca8-f452245ace28
+		summarizeBy: none
+		sourceColumn: coleta_brt
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_coleta
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 0433b80e-ff61-40e3-9671-b2cab81b32f0
+		summarizeBy: none
+		sourceColumn: data_coleta
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column hora
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: e927d4c4-1c49-40a3-abb2-5df683eac68e
+		summarizeBy: sum
+		sourceColumn: hora
+
+		annotation SummarizationSetBy = Automatic
+
+	column companhia
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 65c5f0ed-e82f-4a31-b42f-f82af38b7953
+		summarizeBy: none
+		sourceColumn: companhia
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo_companhia
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: ccecb137-e705-4971-b8fb-4ba3a09682f8
+		summarizeBy: none
+		sourceColumn: tipo_companhia
+
+		annotation SummarizationSetBy = Automatic
+
+	column avioes
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: fe7b5e2c-7192-4755-b0f6-3a0ed783ec2e
+		summarizeBy: sum
+		sourceColumn: avioes
+
+		annotation SummarizationSetBy = Automatic
+
+	column no_ar
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 2ef185e2-ca34-4af0-86f3-04997956fa5d
+		summarizeBy: sum
+		sourceColumn: no_ar
+
+		annotation SummarizationSetBy = Automatic
+
+	column em_solo
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 77ac212a-2b90-4fae-85fa-e22b9bda9bae
+		summarizeBy: sum
+		sourceColumn: em_solo
+
+		annotation SummarizationSetBy = Automatic
+
+	column vel_media_kmh
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 21ed0e35-650c-4bf9-a570-81ef6fb98f08
+		summarizeBy: sum
+		sourceColumn: vel_media_kmh
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column alt_media_m
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 2d42f065-52a9-4989-a561-7efac175a10b
+		summarizeBy: sum
+		sourceColumn: alt_media_m
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition resumo_coleta = m
+		mode: directQuery
+		source =
+				let
+				    Fonte = DatabricksMultiCloud.Catalogs("dbc-eb71337e-4cba.cloud.databricks.com", "/sql/1.0/warehouses/2acace36d690c6ad", [Catalog="workspace", Database="voos_gold", QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    resumo_coleta_voos_gold_workspace_Table = Fonte{[Item="resumo_coleta",Schema="voos_gold",Catalog="workspace",Kind="Table"]}[Data]
+				in
+				    resumo_coleta_voos_gold_workspace_Table
+
+	annotation PBI_ResultType = Table
+

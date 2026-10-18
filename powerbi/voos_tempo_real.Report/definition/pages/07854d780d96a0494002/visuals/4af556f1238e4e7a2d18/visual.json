@@ -1,0 +1,633 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "4af556f1238e4e7a2d18",
+  "position": {
+    "x": 430.82926829268291,
+    "y": 169.92334494773519,
+    "z": 1,
+    "height": 745.2543554006968,
+    "width": 978.06271777003485,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "iconMapProE938B1CED4834168A55864E1F8E7242E",
+    "query": {
+      "queryState": {
+        "category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "posicao_atual"
+                    }
+                  },
+                  "Property": "icao24"
+                }
+              },
+              "queryRef": "posicao_atual.icao24",
+              "nativeQueryRef": "icao24",
+              "active": true
+            }
+          ]
+        },
+        "Longitude": {
+          "projections": [
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "posicao_atual"
+                        }
+                      },
+                      "Property": "longitude"
+                    }
+                  },
+                  "Function": 1
+                }
+              },
+              "queryRef": "Avg(posicao_atual.longitude)",
+              "nativeQueryRef": "Média de longitude"
+            }
+          ]
+        },
+        "Latitude": {
+          "projections": [
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "posicao_atual"
+                        }
+                      },
+                      "Property": "latitude"
+                    }
+                  },
+                  "Function": 1
+                }
+              },
+              "queryRef": "Avg(posicao_atual.latitude)",
+              "nativeQueryRef": "Média de latitude"
+            }
+          ]
+        },
+        "imageWKT": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "posicao_atual"
+                    }
+                  },
+                  "Property": "Icone Aviao"
+                }
+              },
+              "queryRef": "posicao_atual.Icone Aviao",
+              "nativeQueryRef": "Icone Aviao"
+            }
+          ]
+        },
+        "tooltip": {
+          "projections": [
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "posicao_atual"
+                        }
+                      },
+                      "Property": "voo"
+                    }
+                  },
+                  "Function": 3
+                }
+              },
+              "queryRef": "Min(posicao_atual.voo)",
+              "nativeQueryRef": "Primeiro voo"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "posicao_atual"
+                        }
+                      },
+                      "Property": "companhia"
+                    }
+                  },
+                  "Function": 3
+                }
+              },
+              "queryRef": "Min(posicao_atual.companhia)",
+              "nativeQueryRef": "Primeiro companhia"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "posicao_atual"
+                        }
+                      },
+                      "Property": "fase_voo"
+                    }
+                  },
+                  "Function": 3
+                }
+              },
+              "queryRef": "Min(posicao_atual.fase_voo)",
+              "nativeQueryRef": "Primeiro fase_voo"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "posicao_atual"
+                        }
+                      },
+                      "Property": "altitude_m"
+                    }
+                  },
+                  "Function": 1
+                }
+              },
+              "queryRef": "Sum(posicao_atual.altitude_m)",
+              "nativeQueryRef": "Média de altitude_m"
+            },
+            {
+              "field": {
+                "Aggregation": {
+                  "Expression": {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Entity": "posicao_atual"
+                        }
+                      },
+                      "Property": "velocidade_kmh"
+                    }
+                  },
+                  "Function": 1
+                }
+              },
+              "queryRef": "Sum(posicao_atual.velocidade_kmh)",
+              "nativeQueryRef": "Média de velocidade_kmh"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Aggregation": {
+                "Expression": {
+                  "Column": {
+                    "Expression": {
+                      "SourceRef": {
+                        "Entity": "posicao_atual"
+                      }
+                    },
+                    "Property": "longitude"
+                  }
+                },
+                "Function": 1
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": true
+      }
+    },
+    "objects": {
+      "map": [
+        {
+          "properties": {
+            "engine": {
+              "expr": {
+                "Literal": {
+                  "Value": "'leaflet'"
+                }
+              }
+            },
+            "engineFirstSeenEmpty": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "wmsPushToBounds": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "westBoundLongitude": {
+              "expr": {
+                "Literal": {
+                  "Value": "1.9134116D"
+                }
+              }
+            },
+            "eastBoundLongitude": {
+              "expr": {
+                "Literal": {
+                  "Value": "-10.76418D"
+                }
+              }
+            },
+            "northBoundLatitude": {
+              "expr": {
+                "Literal": {
+                  "Value": "61.331151D"
+                }
+              }
+            },
+            "southBoundLatitude": {
+              "expr": {
+                "Literal": {
+                  "Value": "49.528423D"
+                }
+              }
+            },
+            "limitMap": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "iconMapProVersion": [
+        {
+          "properties": {
+            "apikey": {
+              "expr": {
+                "Literal": {
+                  "Value": "'dc593558-3926-480a-ad6b-7eab69687b4d'"
+                }
+              }
+            },
+            "optOutTracking": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "optInDetailedTracking": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "customerReference": {
+              "expr": {
+                "Literal": {
+                  "Value": "''"
+                }
+              }
+            },
+            "instanceID": {
+              "expr": {
+                "Literal": {
+                  "Value": "'0e862fb0-3a42-436e-a49d-0a3dc1d4a027'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "toggleButtons": [
+        {
+          "properties": {
+            "showIconLibrary": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showIconLibraryGeoJSONReference1": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showIconLibraryGeoJSONReference2": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showIconLibraryGeoJSONReference3": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showIconLibraryGeoJSONReference4": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showIconLibraryGeoJSONReference5": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showIconLibraryWKTPoint": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showPatternLibraryWKT": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showPatternLibraryGeoJSONData1": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showPatternLibraryGeoJSONData2": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showPatternLibraryGeoJSONData3": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showPatternLibraryGeoJSONData4": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showPatternLibraryGeoJSONData5": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "showDataDebug": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "catalog": [
+        {
+          "properties": {
+            "configureLayers": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "heatmapConfiguration": [
+        {
+          "properties": {
+            "includeHeatmapLayer": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "imageConfiguration": [
+        {
+          "properties": {
+            "includeImageLayer": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "circlesConfiguration": [
+        {
+          "properties": {
+            "includeCircleLayer": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "mapSource": {
+              "expr": {
+                "Literal": {
+                  "Value": "'raster'"
+                }
+              }
+            },
+            "rasterTilesURL": {
+              "expr": {
+                "Literal": {
+                  "Value": "'     https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "overlays": [
+        {
+          "properties": {
+            "rasterLayer": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "rasterURL": {
+              "expr": {
+                "Literal": {
+                  "Value": "'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'"
+                }
+              }
+            },
+            "rasterZIndex": {
+              "expr": {
+                "Literal": {
+                  "Value": "300D"
+                }
+              }
+            },
+            "daylightTerminator": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "mapLabels": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualHeader": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualTooltip": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "background": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "transparency": {
+              "expr": {
+                "Literal": {
+                  "Value": "0D"
+                }
+              }
+            },
+            "color": {
+              "solid": {
+                "color": {
+                  "expr": {
+                    "ThemeDataColor": {
+                      "ColorId": 0,
+                      "Percent": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "border": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

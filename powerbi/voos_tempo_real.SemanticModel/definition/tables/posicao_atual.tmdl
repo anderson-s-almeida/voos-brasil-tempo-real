@@ -1,0 +1,871 @@
+table posicao_atual
+	lineageTag: 7bca9278-951e-49f9-b3a7-c38b98af6116
+
+	measure 'Ultima Coleta' = CALCULATE ( MAX ( posicao_atual[coleta_brt] ), REMOVEFILTERS ( posicao_atual ) )
+		formatString: dd/MM/yyyy HH:mm:ss
+		displayFolder: Base
+		lineageTag: 4339ebde-716f-4322-a8aa-04ddc3698053
+
+	measure 'Avioes No Ar' =
+			CALCULATE (
+			    COUNTROWS ( posicao_atual ),
+			    REMOVEFILTERS ( posicao_atual ),
+			    posicao_atual[em_solo] = FALSE ()
+			)
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: ab341780-4fac-4c5e-aae7-d25285f4cb2a
+
+	measure 'Avioes Em Solo' =
+			CALCULATE (
+			    COUNTROWS ( posicao_atual ),
+			    REMOVEFILTERS ( posicao_atual ),
+			    posicao_atual[em_solo] = TRUE ()
+			)
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: 9c2046f6-8758-4999-a8e1-97f4ae59a27e
+
+	measure 'Velocidade Media No Ar' =
+			CALCULATE (
+			    AVERAGE ( posicao_atual[velocidade_kmh] ),
+			    REMOVEFILTERS ( posicao_atual ),
+			    posicao_atual[em_solo] = FALSE ()
+			)
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: 6ab0bd5e-8a7b-4be5-90ea-abd598e1a354
+
+	measure 'Altitude Media No Ar' =
+			CALCULATE (
+			    AVERAGE ( posicao_atual[altitude_m] ),
+			    REMOVEFILTERS ( posicao_atual ),
+			    posicao_atual[em_solo] = FALSE ()
+			)
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: 6b31a1ed-741d-4025-bdbe-cbc8ff35f47b
+
+	measure 'Companhias No Ar' =
+			CALCULATE (
+			    DISTINCTCOUNT ( posicao_atual[companhia] ),
+			    REMOVEFILTERS ( posicao_atual ),
+			    posicao_atual[em_solo] = FALSE (),
+			    posicao_atual[tipo_companhia] IN { "Nacional", "Internacional", "Carga" }
+			)
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: e43be5a3-4922-4fdc-9b8e-f196388afa34
+
+	measure 'Avioes No Ar Ontem' =
+			VAR _alvo = [Ultima Coleta] - 1
+			VAR _coleta =
+			    CALCULATE (
+			        MAX ( resumo_coleta[coleta_brt] ),
+			        REMOVEFILTERS ( resumo_coleta ),
+			        resumo_coleta[coleta_brt] <= _alvo,
+			        resumo_coleta[coleta_brt] > _alvo - 15 / 1440
+			    )
+			RETURN
+			    IF (
+			        NOT ISBLANK ( _coleta ),
+			        CALCULATE (
+			            SUM ( resumo_coleta[no_ar] ),
+			            REMOVEFILTERS ( resumo_coleta ),
+			            resumo_coleta[coleta_brt] = _coleta
+			        )
+			    )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: a8c01551-ffcc-4f88-b043-e0d121b60f28
+
+	measure 'Velocidade Media Dia' =
+			VAR _ult = [Ultima Coleta]
+			VAR _dia = DATE ( YEAR ( _ult ), MONTH ( _ult ), DAY ( _ult ) )
+			RETURN
+			    CALCULATE (
+			        DIVIDE (
+			            SUMX ( resumo_coleta, resumo_coleta[vel_media_kmh] * resumo_coleta[no_ar] ),
+			            SUM ( resumo_coleta[no_ar] )
+			        ),
+			        REMOVEFILTERS ( resumo_coleta ),
+			        resumo_coleta[data_coleta] = _dia
+			    )
+		formatString: #,0
+		displayFolder: Base
+		lineageTag: 3593211f-76d4-4a48-be42-69ab82e7b4fa
+
+	measure 'HTML Estilo Voos' =
+			"<style>
+			*{box-sizing:border-box;margin:0;padding:0}
+			body{background:radial-gradient(1200px 700px at 55% 40%,#0f2147 0%,#0a1230 45%,#070c22 100%);font-family:'Segoe UI',sans-serif;color:#e2e8f0;overflow:hidden}
+			.pg{color:#e2e8f0;height:100vh;padding:12px;display:grid;grid-template-rows:58px minmax(0,1fr) 104px;gap:12px}
+			.rkn,.lg,td,.leg span,.hint b{color:#e2e8f0}
+			.card{background:linear-gradient(180deg,rgba(30,41,82,.55),rgba(15,23,52,.55));border:1px solid rgba(96,165,250,.18);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);min-height:0;overflow:hidden}
+			.hd{display:flex;align-items:center;padding:0 16px;gap:12px}
+			.logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#38bdf8,#6366f1);display:grid;place-items:center}
+			.ttl{font-size:19px;font-weight:700;color:#fff}.sub{font-size:11.5px;color:#94a3b8;margin-top:1px}
+			.live{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:#94a3b8}.live b{color:#fff}
+			.pill{border:1px solid #10b981;color:#34d399;border-radius:20px;padding:3px 10px;font-weight:600;display:flex;align-items:center;gap:6px}
+			.pill i{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+			.pill.off{border-color:#f59e0b;color:#fbbf24}.pill.off i{background:#fbbf24;box-shadow:0 0 8px #fbbf24}
+			.main{display:grid;grid-template-columns:minmax(0,0.82fr) minmax(0,2.3fr) minmax(0,1fr);gap:12px;min-height:0}
+			.col{display:grid;gap:12px;min-height:0}
+			.pad{padding:14px 16px}
+			.ct{font-size:14px;font-weight:600;color:#f1f5f9;display:flex;justify-content:space-between;align-items:baseline}
+			.ct small{font-size:10.5px;color:#64748b;font-weight:500}
+			.rk{display:grid;grid-template-columns:minmax(0,1fr) 48px 24px;align-items:center;gap:8px;font-size:11.5px;padding:6px 0;border-bottom:1px solid rgba(51,65,85,.45)}
+			.rkn{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+			.rk b{text-align:right;color:#fff}
+			.bar{height:6px;background:#1e293b;border-radius:4px;overflow:hidden}.bar i{display:block;height:100%;border-radius:4px}
+			.sw{width:9px;height:9px;border-radius:3px;display:inline-block;flex:none}
+			.dn{display:flex;align-items:center;gap:12px;margin-top:8px}
+			.lg{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:4px 0;min-width:100px}.lg b{margin-left:auto;color:#fff}
+			.map{position:relative;padding:14px 16px;display:flex;flex-direction:column}
+			.mapbox{flex:1;min-height:0;position:relative}.mapbox svg{position:absolute;inset:0;width:100%;height:100%}
+			.leg{position:absolute;top:12px;right:14px;display:flex;gap:11px;font-size:10.5px;background:rgba(15,23,42,.7);border:1px solid rgba(96,165,250,.2);padding:5px 11px;border-radius:20px}
+			.leg span{display:flex;align-items:center;gap:5px}
+			.buscas{display:flex;gap:8px;margin-top:8px}
+			.busca{width:190px;height:30px;border:1px dashed rgba(148,163,184,.35);border-radius:8px}
+			.sel{position:absolute;right:16px;bottom:16px;width:225px;background:rgba(9,14,35,.92);border:1px solid rgba(251,146,60,.45);border-radius:12px;padding:11px 13px}
+			.sel.vz{border-color:rgba(96,165,250,.25)}
+			.sel .l{font-size:9.5px;letter-spacing:.08em;color:#94a3b8}.sel .v{font-size:12px;font-weight:600;color:#fff}
+			.sel h3{font-size:16px;margin:2px 0;color:#fff}.sel .g{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px;margin-top:8px}
+			.tag{font-size:10px;color:#fb923c;border:1px solid #fb923c;border-radius:20px;padding:1px 8px}
+			.hint{font-size:11.5px;color:#94a3b8;margin-top:4px;line-height:1.4}
+			.dim{color:#94a3b8}
+			table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px}
+			th{font-size:9.5px;color:#64748b;text-align:left;font-weight:500;letter-spacing:.06em;padding:4px 0}
+			td{padding:6px 0;border-bottom:1px solid rgba(51,65,85,.45);white-space:nowrap}.r{text-align:right}td.dim{color:#94a3b8}
+			.mono{font-family:Consolas,monospace;color:#7dd3fc;font-size:11px}td.mono{color:#7dd3fc}
+			.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+			.kpi{padding:14px 16px}.kt{font-size:10.5px;letter-spacing:.08em;color:#94a3b8}.kv{font-size:28px;font-weight:800;margin:3px 0 1px;color:#fff}
+			.ks{font-size:11px;color:#94a3b8}.up{color:#34d399}.down{color:#f87171}
+			</style>"
+		displayFolder: HTML
+		lineageTag: 0c4814d2-5522-41c7-9fee-7a6bb16e4d2a
+
+	measure 'HTML Cabecalho Voos' =
+			VAR _ult = [Ultima Coleta]
+			VAR _aoVivo = NOT ISBLANK ( _ult ) && NOW () - _ult <= 90 / 1440
+			VAR _pill =
+			    IF (
+			        _aoVivo,
+			        "<span class='pill'><i></i>AO VIVO</span>",
+			        "<span class='pill off'><i></i>DADOS ATRASADOS</span>"
+			    )
+			RETURN
+			    "<div class='card hd'><div class='logo'><svg width='22' height='22' viewBox='-6 -6 12 12'><path transform='rotate(45)' d='M0 -5L1 -1.5L5 .7L5 1.7L1 .8L.7 3.5L2 4.6L2 5.2L0 4.6L-2 5.2L-2 4.6L-.7 3.5L-1 .8L-5 1.7L-5 .7L-1 -1.5Z' fill='#fff'/></svg></div>"
+			        & "<div><div class='ttl'>Voos sobre o Brasil · Tempo Real</div><div class='sub'>Posição das aeronaves no espaço aéreo brasileiro · fonte: OpenSky Network</div></div>"
+			        & "<div class='live'>" & _pill & "última coleta às <b>"
+			        & FORMAT ( _ult, "HH:mm:ss" ) & "</b> · " & FORMAT ( _ult, "dd/MM" )
+			        & "</div></div>"
+		displayFolder: HTML
+		lineageTag: 18c947f9-20d7-4b8d-af7e-d649dd984ecc
+
+	measure 'HTML Companhias' =
+			VAR _base =
+			    CALCULATETABLE (
+			        posicao_atual,
+			        REMOVEFILTERS ( posicao_atual ),
+			        posicao_atual[em_solo] = FALSE ()
+			    )
+			VAR _grp =
+			    GROUPBY (
+			        _base,
+			        posicao_atual[companhia],
+			        posicao_atual[tipo_companhia],
+			        "n", COUNTX ( CURRENTGROUP (), 1 )
+			    )
+			VAR _top = TOPN ( 8, _grp, [n], DESC )
+			VAR _max = MAXX ( _grp, [n] )
+			VAR _linhas =
+			    CONCATENATEX (
+			        _top,
+			        VAR _cor =
+			            SWITCH (
+			                TRUE (),
+			                posicao_atual[companhia] = "LATAM Brasil", "#f43f5e",
+			                posicao_atual[companhia] = "Gol", "#fb923c",
+			                CONTAINSSTRING ( posicao_atual[companhia], "Azul" ), "#38bdf8",
+			                posicao_atual[tipo_companhia] = "Aviação geral", "#94a3b8",
+			                posicao_atual[companhia] IN { "Sem identificação", "Outras" }, "#64748b",
+			                "#a78bfa"
+			            )
+			        RETURN
+			            "<div class='rk'><div class='rkn'><span class='sw' style='background:" & _cor & "'></span>"
+			                & posicao_atual[companhia]
+			                & "</div><div class='bar'><i style='width:" & FORMAT ( DIVIDE ( [n], _max ) * 100, "0" )
+			                & "%;background:" & _cor & "'></i></div><b>" & [n] & "</b></div>",
+			        "",
+			        [n], DESC
+			    )
+			RETURN
+			    "<div class='card pad'><div class='ct'>Companhias no ar agora <small>aviões</small></div><div style='margin-top:6px'>"
+			        & _linhas & "</div></div>"
+		displayFolder: HTML
+		lineageTag: 60c51d12-a11f-4d70-a459-455c129d285e
+
+	measure 'HTML Fase Voo' =
+			VAR _base = CALCULATETABLE ( posicao_atual, REMOVEFILTERS ( posicao_atual ) )
+			VAR _cru = COUNTROWS ( FILTER ( _base, posicao_atual[fase_voo] = "Cruzeiro" ) ) + 0
+			VAR _des = COUNTROWS ( FILTER ( _base, posicao_atual[fase_voo] = "Descendo" ) ) + 0
+			VAR _sub = COUNTROWS ( FILTER ( _base, posicao_atual[fase_voo] = "Subindo" ) ) + 0
+			VAR _sol = COUNTROWS ( FILTER ( _base, posicao_atual[fase_voo] = "Em solo" ) ) + 0
+			VAR _tot = _cru + _des + _sub + _sol
+			VAR _l1 = DIVIDE ( _cru, _tot ) * 1000
+			VAR _l2 = DIVIDE ( _des, _tot ) * 1000
+			VAR _l3 = DIVIDE ( _sub, _tot ) * 1000
+			VAR _l4 = DIVIDE ( _sol, _tot ) * 1000
+			VAR _arco = "<circle cx='60' cy='60' r='46' fill='none' stroke-width='13' pathLength='1000' transform='rotate(-90 60 60)' "
+			VAR _svg =
+			    "<svg viewBox='0 0 120 120' style='width:140px;height:140px;flex:none'>"
+			        & _arco & "stroke='#38bdf8' stroke-dasharray='" & FORMAT ( MAX ( _l1 - 6, 0 ), "0" ) & " 1000' stroke-dashoffset='0'/>"
+			        & _arco & "stroke='#f59e0b' stroke-dasharray='" & FORMAT ( MAX ( _l2 - 6, 0 ), "0" ) & " 1000' stroke-dashoffset='-" & FORMAT ( _l1, "0" ) & "'/>"
+			        & _arco & "stroke='#34d399' stroke-dasharray='" & FORMAT ( MAX ( _l3 - 6, 0 ), "0" ) & " 1000' stroke-dashoffset='-" & FORMAT ( _l1 + _l2, "0" ) & "'/>"
+			        & _arco & "stroke='#64748b' stroke-dasharray='" & FORMAT ( MAX ( _l4 - 6, 0 ), "0" ) & " 1000' stroke-dashoffset='-" & FORMAT ( _l1 + _l2 + _l3, "0" ) & "'/>"
+			        & "<text x='60' y='61' font-size='22' font-weight='800' fill='#fff' text-anchor='middle'>" & FORMAT ( _cru + _des + _sub, "0" ) & "</text>"
+			        & "<text x='60' y='76' font-size='8' fill='#94a3b8' text-anchor='middle'>no ar agora</text></svg>"
+			VAR _leg =
+			    "<div class='lg'><span class='sw' style='background:#38bdf8'></span>Cruzeiro<b>" & _cru & "</b></div>"
+			        & "<div class='lg'><span class='sw' style='background:#f59e0b'></span>Descendo<b>" & _des & "</b></div>"
+			        & "<div class='lg'><span class='sw' style='background:#34d399'></span>Subindo<b>" & _sub & "</b></div>"
+			        & "<div class='lg'><span class='sw' style='background:#64748b'></span>Em solo<b>" & _sol & "</b></div>"
+			RETURN
+			    "<div class='card pad'><div class='ct'>Fase do voo <small>última coleta</small></div><div class='dn'>"
+			        & _svg & "<div>" & _leg & "</div></div></div>"
+		displayFolder: HTML
+		lineageTag: 76a371da-b6cc-4325-af63-e8933c89b3cf
+
+	measure 'HTML Voo Selecionado' =
+			IF (
+			    ISFILTERED ( posicao_atual[voo] ) && HASONEVALUE ( posicao_atual[icao24] ),
+			    VAR _voo = COALESCE ( SELECTEDVALUE ( posicao_atual[voo] ), "sem identificação" )
+			    VAR _cia = SELECTEDVALUE ( posicao_atual[companhia] )
+			    VAR _fase = SELECTEDVALUE ( posicao_atual[fase_voo] )
+			    VAR _alt = MAX ( posicao_atual[altitude_m] )
+			    VAR _vel = MAX ( posicao_atual[velocidade_kmh] )
+			    VAR _dir = MAX ( posicao_atual[direcao_graus] )
+			    VAR _pais = SELECTEDVALUE ( posicao_atual[pais_origem] )
+			    VAR _hora = MAX ( posicao_atual[coleta_brt] )
+			    VAR _card =
+			        SWITCH (
+			            INT ( MOD ( _dir + 22.5, 360 ) / 45 ),
+			            0, "N", 1, "NE", 2, "L", 3, "SE", 4, "S", 5, "SO", 6, "O", 7, "NO"
+			        )
+			    RETURN
+			        "<div class='sel'><div style='display:flex;justify-content:space-between;align-items:center'><span class='l'>VOO SELECIONADO</span><span class='tag'>"
+			            & LOWER ( _fase ) & "</span></div>"
+			            & "<h3>" & _voo & " · " & _cia & "</h3><div class='dim' style='font-size:11px'>registro: " & _pais & " · rastro das últimas 3 h</div>"
+			            & "<div class='g'><div><div class='l'>ALTITUDE</div><div class='v'>" & FORMAT ( _alt, "#,##0" ) & " m</div></div>"
+			            & "<div><div class='l'>VELOCIDADE</div><div class='v'>" & FORMAT ( _vel, "#,##0" ) & " km/h</div></div>"
+			            & "<div><div class='l'>DIREÇÃO</div><div class='v'>" & FORMAT ( _dir, "0" ) & "° · " & _card & "</div></div>"
+			            & "<div><div class='l'>POSIÇÃO ÀS</div><div class='v'>" & FORMAT ( _hora, "HH:mm:ss" ) & "</div></div></div></div>",
+			    "<div class='sel vz'><span class='l'>NAVEGAR NO MAPA</span><div class='hint'>Use <b>Região</b> para aproximar o mapa e <b>Buscar voo</b> para centralizar um avião e ver o rastro das últimas 3 horas.</div></div>"
+			)
+		displayFolder: HTML
+		lineageTag: 9f34cc32-5779-49a9-9a5b-d43946c1ad5b
+
+	measure 'HTML Serie Voos' =
+			VAR _ult = CALCULATE ( MAX ( resumo_coleta[coleta_brt] ), REMOVEFILTERS ( resumo_coleta ) )
+			VAR _ini = _ult - 1
+			VAR _W = 600
+			VAR _H = 300
+			VAR _t =
+			    ADDCOLUMNS (
+			        CALCULATETABLE (
+			            VALUES ( resumo_coleta[coleta_brt] ),
+			            REMOVEFILTERS ( resumo_coleta ),
+			            resumo_coleta[coleta_brt] > _ini
+			        ),
+			        "n", CALCULATE ( SUM ( resumo_coleta[no_ar] ), REMOVEFILTERS ( resumo_coleta[companhia], resumo_coleta[tipo_companhia] ) )
+			    )
+			VAR _maxN = MAXX ( _t, [n] )
+			VAR _ymax = MAX ( CEILING ( _maxN, 50 ), 50 )
+			VAR _pts =
+			    ADDCOLUMNS (
+			        _t,
+			        "x", 40 + ( resumo_coleta[coleta_brt] - _ini ) * ( _W - 55 ),
+			        "y", _H - 28 - DIVIDE ( [n], _ymax ) * ( _H - 50 )
+			    )
+			VAR _linha =
+			    CONCATENATEX ( _pts, FORMAT ( [x], "0" ) & "," & FORMAT ( [y], "0" ), " ", resumo_coleta[coleta_brt], ASC )
+			VAR _x0 = MINX ( _pts, [x] )
+			VAR _x1 = MAXX ( _pts, [x] )
+			VAR _area =
+			    "M" & FORMAT ( _x0, "0" ) & "," & FORMAT ( _H - 28, "0" ) & " L" & SUBSTITUTE ( _linha, " ", " L" )
+			        & " L" & FORMAT ( _x1, "0" ) & "," & FORMAT ( _H - 28, "0" ) & "Z"
+			VAR _grade =
+			    CONCATENATEX (
+			        GENERATESERIES ( 0, 4, 1 ),
+			        VAR _v = _ymax * [Value] / 4
+			        VAR _yy = _H - 28 - DIVIDE ( _v, _ymax ) * ( _H - 50 )
+			        RETURN
+			            "<line x1='40' x2='" & _W - 10 & "' y1='" & FORMAT ( _yy, "0" ) & "' y2='" & FORMAT ( _yy, "0" )
+			                & "' stroke='#1e293b'/><text x='32' y='" & FORMAT ( _yy + 4, "0" )
+			                & "' font-size='11' fill='#64748b' text-anchor='end'>" & FORMAT ( _v, "0" ) & "</text>",
+			        ""
+			    )
+			VAR _eixoX =
+			    CONCATENATEX (
+			        GENERATESERIES ( 0, 6, 1 ),
+			        VAR _tt = _ini + [Value] * 4 / 24
+			        VAR _xx = 40 + [Value] * 4 / 24 * ( _W - 55 )
+			        RETURN
+			            "<text x='" & FORMAT ( _xx, "0" ) & "' y='" & _H - 8
+			                & "' font-size='11' fill='#64748b' text-anchor='middle'>" & FORMAT ( _tt, "HH" ) & "h</text>",
+			        ""
+			    )
+			VAR _pico = TOPN ( 1, _pts, [n], DESC, resumo_coleta[coleta_brt], DESC )
+			VAR _px = MAXX ( _pico, [x] )
+			VAR _py = MAXX ( _pico, [y] )
+			VAR _marca =
+			    "<circle cx='" & FORMAT ( _px, "0" ) & "' cy='" & FORMAT ( _py, "0" )
+			        & "' r='4.5' fill='#0b1023' stroke='#38bdf8' stroke-width='2.5'/>"
+			        & "<rect x='" & FORMAT ( _px - 36, "0" ) & "' y='" & FORMAT ( _py - 30, "0" )
+			        & "' width='72' height='20' rx='5' fill='#1d4ed8'/><text x='" & FORMAT ( _px, "0" ) & "' y='" & FORMAT ( _py - 16, "0" )
+			        & "' font-size='11.5' fill='#fff' text-anchor='middle' font-weight='700'>pico " & FORMAT ( _maxN, "0" ) & "</text>"
+			VAR _svg =
+			    "<svg viewBox='0 0 " & _W & " " & _H & "' preserveAspectRatio='xMidYMid meet' style='width:100%;height:100%'>"
+			        & "<defs><linearGradient id='ga' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#38bdf8' stop-opacity='.45'/><stop offset='1' stop-color='#38bdf8' stop-opacity='0'/></linearGradient></defs>"
+			        & _grade & "<path d='" & _area & "' fill='url(#ga)'/>"
+			        & "<polyline points='" & _linha & "' fill='none' stroke='#38bdf8' stroke-width='2.5' stroke-linejoin='round'/>"
+			        & _marca & _eixoX & "</svg>"
+			RETURN
+			    "<div class='card pad' style='display:flex;flex-direction:column'><div class='ct'>Aviões no ar · últimas 24 h <small>a cada coleta</small></div>"
+			        & "<div style='flex:1;min-height:0;margin-top:8px'>" & _svg & "</div></div>"
+		displayFolder: HTML
+		lineageTag: e236821c-8495-43b0-a72e-eb7e13df4a6b
+
+	measure 'HTML Mais Rapidos' =
+			VAR _base =
+			    CALCULATETABLE (
+			        posicao_atual,
+			        REMOVEFILTERS ( posicao_atual ),
+			        posicao_atual[em_solo] = FALSE (),
+			        NOT ISBLANK ( posicao_atual[velocidade_kmh] )
+			    )
+			VAR _top = TOPN ( 7, _base, posicao_atual[velocidade_kmh], DESC, posicao_atual[icao24], ASC )
+			VAR _linhas =
+			    CONCATENATEX (
+			        _top,
+			        "<tr><td class='mono'>" & COALESCE ( posicao_atual[voo], "—" ) & "</td><td>"
+			            & LEFT ( posicao_atual[companhia], 20 ) & "</td><td class='r'>"
+			            & FORMAT ( posicao_atual[velocidade_kmh], "#,##0" ) & "</td><td class='r dim'>"
+			            & FORMAT ( posicao_atual[altitude_m], "#,##0" ) & "</td></tr>",
+			        "",
+			        posicao_atual[velocidade_kmh], DESC
+			    )
+			RETURN
+			    "<div class='card pad'><div class='ct'>Mais rápidos agora <small>km/h</small></div>"
+			        & "<table><tr><th>VOO</th><th>COMPANHIA</th><th class='r'>KM/H</th><th class='r'>ALT. (M)</th></tr>"
+			        & _linhas & "</table></div>"
+		displayFolder: HTML
+		lineageTag: d81f7a12-6f4b-416c-a3da-0fd21184e728
+
+	measure 'HTML KPIs Voos' =
+			VAR _ult = [Ultima Coleta]
+			VAR _dia = DATE ( YEAR ( _ult ), MONTH ( _ult ), DAY ( _ult ) )
+			VAR _noAr = [Avioes No Ar]
+			VAR _ontem = [Avioes No Ar Ontem]
+			VAR _var = DIVIDE ( _noAr - _ontem, _ontem )
+			VAR _txtOntem =
+			    IF (
+			        ISBLANK ( _ontem ),
+			        "sem coleta de ontem ainda",
+			        IF ( _var >= 0, "<span class='up'>▲ ", "<span class='down'>▼ " )
+			            & FORMAT ( ABS ( _var ), "0.0%" ) & "</span> vs mesmo horário ontem"
+			    )
+			VAR _vel = [Velocidade Media No Ar]
+			VAR _velDia = [Velocidade Media Dia]
+			VAR _dVel = _vel - _velDia
+			VAR _txtVel =
+			    IF (
+			        ISBLANK ( _velDia ),
+			        "média das aeronaves em voo",
+			        IF ( _dVel >= 0, "<span class='up'>▲ ", "<span class='down'>▼ " )
+			            & FORMAT ( ABS ( _dVel ), "0" ) & " km/h</span> vs média do dia"
+			    )
+			VAR _alt = [Altitude Media No Ar]
+			VAR _picoTab =
+			    ADDCOLUMNS (
+			        CALCULATETABLE (
+			            VALUES ( resumo_coleta[coleta_brt] ),
+			            REMOVEFILTERS ( resumo_coleta ),
+			            resumo_coleta[data_coleta] = _dia
+			        ),
+			        "n", CALCULATE ( SUM ( resumo_coleta[no_ar] ), REMOVEFILTERS ( resumo_coleta[companhia], resumo_coleta[tipo_companhia] ) )
+			    )
+			VAR _pico = MAXX ( _picoTab, [n] )
+			VAR _picoHora = MAXX ( TOPN ( 1, _picoTab, [n], DESC, resumo_coleta[coleta_brt], DESC ), resumo_coleta[coleta_brt] )
+			VAR _k = "<div class='card kpi'><div class='kt'>"
+			RETURN
+			    "<div class='kpis'>"
+			        & _k & "AVIÕES NO AR</div><div class='kv'>" & FORMAT ( _noAr, "#,##0" ) & "</div><div class='ks'>" & _txtOntem & "</div></div>"
+			        & _k & "EM SOLO / TAXIANDO</div><div class='kv'>" & FORMAT ( [Avioes Em Solo] + 0, "#,##0" ) & "</div><div class='ks'>com sinal na última coleta</div></div>"
+			        & _k & "VELOCIDADE MÉDIA</div><div class='kv'>" & FORMAT ( _vel, "#,##0" ) & " km/h</div><div class='ks'>" & _txtVel & "</div></div>"
+			        & _k & "ALTITUDE MÉDIA</div><div class='kv'>" & FORMAT ( _alt, "#,##0" ) & " m</div><div class='ks'>≈ " & FORMAT ( _alt * 3.281, "#,##0" ) & " pés</div></div>"
+			        & _k & "PICO DO DIA</div><div class='kv'>" & FORMAT ( _pico, "#,##0" ) & "</div><div class='ks'>às "
+			        & FORMAT ( _picoHora, "HH:mm" ) & " · " & [Companhias No Ar] & " companhias no ar agora</div></div>"
+			        & "</div>"
+		displayFolder: HTML
+		lineageTag: 2da5fc0f-2168-4950-a49f-162c62355a33
+
+	/// Contorno dos estados (x = (lon+74.2)*10.1, y = (5.4-lat)*10.4) e aeroportos principais
+	measure 'SVG Brasil Contorno' = "<path d='M212 292L220 286L231 268L240 262L252 264L252 267L254 266L255 268L256 266L270 264L272 266L272 274L275 279L280 279L278 288L281 290L281 294L286 294L288 291L291 292L297 289L299 291L303 291L302 293L297 295L298 299L291 302L291 304L286 303L275 309L266 315L264 319L262 316L259 317L260 314L252 313L252 309L248 304L248 298L245 294L237 295L224 290L212 292ZM327 85L327 88L323 92L320 92L315 100L317 110L314 115L314 119L317 121L316 126L310 127L305 127L298 133L290 136L285 149L287 155L285 163L281 162L278 158L279 155L274 150L277 144L280 144L280 139L275 140L270 132L267 131L270 129L271 124L270 114L261 110L257 112L269 103L274 96L285 67L285 69L288 68L288 70L289 69L290 72L292 70L292 74L296 71L297 74L300 75L298 80L300 79L301 80L297 90L301 87L301 83L304 81L302 85L303 86L308 80L311 83L311 80L312 81L323 86L326 86L323 84L327 85ZM232 62L231 67L225 71L229 62L232 62ZM235 59L234 59L237 56L238 57L235 59ZM250 55L250 57L247 58L250 55ZM242 53L249 52L248 54L244 57L241 56L242 53ZM241 51L240 52L241 51ZM244 50L242 52L241 51L244 50ZM249 74L238 75L236 71L236 67L239 68L236 67L237 63L238 59L241 57L252 58L261 60L256 71L255 70L256 71L254 72L253 71L253 73L251 72L249 74ZM284 69L282 79L274 96L269 103L257 112L263 115L262 118L258 125L253 128L251 135L253 137L251 143L244 153L242 159L176 154L168 147L167 142L159 126L180 80L162 69L156 63L154 43L158 43L160 40L163 40L173 35L184 37L185 35L183 32L184 30L187 31L194 30L197 33L197 38L200 38L210 43L219 65L225 68L224 71L217 73L221 72L222 74L236 66L235 68L238 74L236 76L238 75L240 78L245 75L246 77L252 75L248 84L255 73L255 75L258 71L260 73L260 72L261 71L260 71L260 69L262 69L260 68L265 63L274 63L274 65L277 64L280 67L283 66L284 69ZM259 326L257 329L257 327L260 339L258 350L257 352L256 351L256 354L247 361L243 361L247 352L238 351L233 345L222 340L210 338L206 339L207 329L230 334L232 333L232 330L238 327L245 327L249 329L259 326ZM343 243L343 241L339 237L340 232L342 232L347 224L343 221L332 220L327 213L324 214L316 209L308 209L306 209L307 205L302 204L284 215L286 205L282 200L284 190L281 182L284 180L282 179L284 177L279 174L282 168L287 164L294 169L304 166L308 161L307 154L314 154L319 156L322 153L327 152L328 150L334 147L336 148L339 155L351 145L362 150L368 161L368 167L364 168L363 169L368 176L372 175L362 191L360 192L360 188L358 187L357 190L360 191L355 195L356 200L354 199L355 201L356 201L355 209L357 221L353 235L354 240L349 247L343 243ZM225 68L219 65L210 43L200 38L197 38L196 35L196 31L203 34L211 32L215 34L219 29L221 24L228 12L229 13L229 10L230 11L233 18L234 16L233 21L238 34L240 37L245 39L246 42L236 54L231 57L225 68ZM203 305L202 306L198 304L190 306L188 291L185 288L180 286L175 288L164 285L165 274L162 266L165 264L162 261L166 254L168 245L166 241L172 241L176 236L181 235L192 240L197 238L203 239L207 236L204 242L214 244L214 247L216 247L215 250L219 251L235 259L234 265L228 271L224 281L219 287L208 295L203 305ZM234 265L235 259L241 251L250 249L251 250L255 247L266 248L272 244L272 239L269 238L273 233L270 228L272 223L276 221L276 213L279 213L280 209L282 211L285 211L284 215L302 204L307 205L306 209L308 209L316 209L324 214L327 213L332 220L343 221L347 224L340 234L339 237L343 241L343 243L336 243L338 244L334 246L336 252L333 252L336 255L336 259L332 266L327 268L327 271L324 274L322 282L291 292L288 291L286 294L281 294L281 290L278 288L280 279L275 279L272 274L272 266L270 264L256 266L256 268L254 266L252 267L252 264L240 262L234 265ZM271 226L270 228L273 233L269 238L272 239L272 244L266 248L255 247L251 250L250 249L241 251L236 259L215 250L216 247L214 246L212 236L218 228L217 226L225 221L228 214L233 211L236 199L239 191L243 185L242 191L251 194L254 188L257 195L263 192L268 195L268 193L269 194L282 189L284 190L282 198L286 205L285 211L282 211L280 209L279 213L276 213L276 221L272 223L270 217L263 217L263 223L272 223L271 226ZM247 361L237 379L223 390L224 387L227 387L232 383L233 379L237 376L237 372L238 373L239 372L238 370L235 373L231 368L232 372L230 379L225 382L222 388L223 391L218 400L210 407L209 406L209 402L213 397L217 398L218 391L212 396L206 389L194 381L188 377L184 379L184 376L175 369L172 371L168 370L184 353L187 352L186 350L204 339L214 338L230 343L238 351L247 352L243 361L247 361ZM285 163L287 164L282 168L279 174L284 177L282 179L284 180L281 182L283 186L282 189L269 194L268 193L268 195L263 192L257 195L254 188L251 194L248 193L242 191L243 185L238 189L237 176L238 167L244 153L249 148L253 140L253 137L251 135L253 128L261 122L263 115L261 112L257 112L261 110L266 111L270 114L271 121L270 129L267 131L270 132L275 140L279 138L280 140L280 144L277 144L274 150L279 155L278 158L281 162L285 163ZM287 164L285 163L287 155L285 149L290 136L298 133L305 127L310 127L316 126L317 121L314 119L314 115L317 110L315 100L320 92L325 90L327 85L332 87L331 92L334 100L333 107L338 124L341 127L340 133L338 133L339 141L328 150L327 152L322 153L319 156L311 153L307 154L308 161L303 167L294 169L287 164ZM394 149L382 165L376 160L365 155L363 153L368 148L376 153L382 152L386 149L394 149ZM396 124L398 135L391 134L390 136L382 138L376 142L374 139L372 139L376 134L373 132L363 138L359 135L360 132L358 128L360 123L364 124L373 119L371 126L378 127L379 129L382 122L396 124ZM360 123L358 128L360 132L356 138L349 133L340 133L341 127L338 124L333 107L333 103L335 101L331 91L333 86L346 86L361 95L370 104L372 105L373 106L368 109L360 123ZM382 165L369 176L366 174L363 169L364 168L366 168L368 167L368 161L366 155L376 160L382 165ZM109 33L109 31L103 30L101 19L96 12L102 14L103 16L110 15L114 19L116 18L115 14L133 9L137 5L137 2L141 1L144 3L142 9L147 11L148 15L145 19L145 21L143 28L146 33L146 37L154 43L155 54L143 54L138 65L136 65L132 61L129 63L127 71L124 70L118 64L120 63L117 56L119 48L115 39L116 36L109 33ZM394 149L386 149L382 152L376 153L368 148L363 153L360 148L359 149L351 145L339 155L336 148L332 147L339 141L340 138L338 133L340 133L349 133L355 138L359 135L363 138L373 132L376 134L372 139L374 139L376 142L382 138L387 137L391 134L395 133L398 135L398 138L394 149ZM207 329L205 323L203 321L199 323L198 321L202 319L200 318L200 315L203 313L201 307L209 294L215 291L224 290L237 295L245 294L248 298L248 304L250 307L252 309L252 313L258 313L260 314L259 317L262 316L264 319L261 322L261 319L260 321L257 320L261 322L259 326L249 329L245 327L238 327L232 330L232 333L230 334L207 329ZM327 272L327 268L332 266L336 259L336 255L333 252L336 252L334 246L338 244L336 243L341 242L349 247L348 258L336 277L328 276L327 272ZM298 299L297 295L303 292L297 289L322 282L324 274L327 272L328 276L336 277L335 280L335 285L326 291L326 293L325 295L315 295L314 292L312 293L313 295L305 296L309 295L305 295L302 298L303 295L301 295L298 296L300 298L298 299ZM360 123L368 109L373 106L380 109L386 109L392 110L396 124L389 123L382 122L379 129L378 127L371 126L373 119L364 124L360 123ZM109 33L116 36L115 39L119 48L117 56L120 63L118 64L124 70L127 71L129 63L132 61L136 65L140 63L140 59L143 54L155 54L155 60L160 67L176 79L179 79L180 81L159 126L162 132L158 147L126 147L124 148L116 140L108 139L103 144L102 149L95 150L92 154L91 152L85 156L79 154L74 158L39 141L16 135L4 130L5 127L11 123L10 119L13 110L21 104L33 102L36 99L43 101L48 68L46 61L42 57L42 50L51 49L50 45L44 45L44 38L61 38L61 35L63 38L68 34L72 38L72 44L74 43L81 49L87 46L87 49L92 44L102 40L103 36L109 33ZM162 132L167 142L168 147L176 154L242 159L237 176L239 191L236 199L233 211L228 214L225 221L217 226L218 228L212 236L214 244L204 242L207 236L203 239L199 238L192 240L183 235L176 236L172 241L168 241L160 236L159 230L160 226L142 225L141 217L138 213L141 213L140 208L139 205L140 202L136 198L140 196L145 185L142 177L144 175L143 172L139 171L128 170L127 147L158 147L162 132ZM272 223L263 223L263 217L270 217L272 223ZM76 159L65 167L62 167L60 170L55 172L55 171L49 170L36 171L37 154L30 160L20 160L19 155L10 154L12 150L2 135L5 132L4 130L16 135L39 141L76 159ZM136 198L133 196L125 197L121 193L115 191L112 188L99 186L93 181L89 172L89 157L74 158L79 154L85 156L91 152L92 154L95 150L102 149L103 144L108 139L116 140L122 147L127 147L128 170L139 171L143 172L144 175L142 177L145 185L140 196L136 198Z' fill='#0f1d3d' stroke='#3b82f6' stroke-opacity='.5' stroke-width='.6' stroke-linejoin='round'/><circle cx='280' cy='300' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='284' y='302' class='ap'>GRU</text><circle cx='313' cy='293' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='317' y='295' class='ap'>GIG</text><circle cx='265' cy='221' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='269' y='223' class='ap'>BSB</text><circle cx='305' cy='260' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='309' y='262' class='ap'>CNF</text><circle cx='233' cy='368' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='237' y='370' class='ap'>POA</text><circle cx='362' cy='190' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='366' y='192' class='ap'>SSA</text><circle cx='397' cy='141' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='401' y='143' class='ap'>REC</text><circle cx='360' cy='95' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='364' y='97' class='ap'>FOR</text><circle cx='143' cy='88' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='147' y='90' class='ap'>MAO</text><circle cx='260' cy='71' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='264' y='73' class='ap'>BEL</text><circle cx='253' cy='322' r='2.4' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='.7'/><text x='257' y='324' class='ap'>CWB</text>"
+		displayFolder: HTML
+		lineageTag: 44ef537c-c5ab-42fa-ac5a-0f689a415ab2
+
+	measure 'HTML Mapa Voos' =
+			VAR _ultUtc = CALCULATE ( MAX ( fato_posicoes[coleta_utc] ), REMOVEFILTERS ( fato_posicoes ) )
+			VAR _sel =
+			    IF (
+			        ISFILTERED ( posicao_atual[voo] ),
+			        SELECTEDVALUE ( posicao_atual[icao24] )
+			    )
+			VAR _temSel = NOT ISBLANK ( _sel )
+			VAR _selX =
+			    CALCULATE ( ( MAX ( posicao_atual[longitude] ) + 74.2 ) * 10.1, REMOVEFILTERS ( posicao_atual ), posicao_atual[icao24] = _sel )
+			VAR _selY =
+			    CALCULATE ( ( 5.4 - MAX ( posicao_atual[latitude] ) ) * 10.4, REMOVEFILTERS ( posicao_atual ), posicao_atual[icao24] = _sel )
+			
+			// --- zoom: voo selecionado > regiao escolhida > Brasil inteiro
+			VAR _reg = SELECTEDVALUE ( 'Zoom Mapa'[Regiao] )
+			VAR _vw = IF ( _temSel, 80, COALESCE ( SELECTEDVALUE ( 'Zoom Mapa'[VW] ), 420 ) )
+			VAR _vx = IF ( _temSel, _selX - 40, COALESCE ( SELECTEDVALUE ( 'Zoom Mapa'[VX] ), -10 ) )
+			VAR _vy = IF ( _temSel, _selY - 40, COALESCE ( SELECTEDVALUE ( 'Zoom Mapa'[VY] ), -5 ) )
+			VAR _z = _vw / 420
+			VAR _esc = SUBSTITUTE ( FORMAT ( 0.9 * _z, "0.000" ), ",", "." )
+			VAR _aproximado = _vw <= 100
+			VAR _aviao = "<path d='M0 -5L1 -1.5L5 .7L5 1.7L1 .8L.7 3.5L2 4.6L2 5.2L0 4.6L-2 5.2L-2 4.6L-.7 3.5L-1 .8L-5 1.7L-5 .7L-1 -1.5Z' fill='"
+			
+			// --- avioes (no ar; em solo aparecem quando o mapa esta aproximado)
+			VAR _avioes =
+			    FILTER (
+			        CALCULATETABLE ( posicao_atual, REMOVEFILTERS ( posicao_atual ) ),
+			        posicao_atual[em_solo] = FALSE () || _aproximado
+			    )
+			VAR _svgAvioes =
+			    CONCATENATEX (
+			        _avioes,
+			        VAR _x = ( posicao_atual[longitude] + 74.2 ) * 10.1
+			        VAR _y = ( 5.4 - posicao_atual[latitude] ) * 10.4
+			        VAR _cor =
+			            SWITCH (
+			                TRUE (),
+			                posicao_atual[em_solo] = TRUE (), "#64748b",
+			                posicao_atual[companhia] = "LATAM Brasil", "#f43f5e",
+			                posicao_atual[companhia] = "Gol", "#fb923c",
+			                CONTAINSSTRING ( posicao_atual[companhia], "Azul" ), "#38bdf8",
+			                posicao_atual[tipo_companhia] = "Aviação geral", "#94a3b8",
+			                posicao_atual[companhia] IN { "Sem identificação", "Outras" }, "#64748b",
+			                "#a78bfa"
+			            )
+			        VAR _op = IF ( _temSel && posicao_atual[icao24] <> _sel, "0.3", "1" )
+			        RETURN
+			            "<g transform='translate(" & SUBSTITUTE ( FORMAT ( _x, "0.0" ), ",", "." ) & " " & SUBSTITUTE ( FORMAT ( _y, "0.0" ), ",", "." )
+			                & ") rotate(" & FORMAT ( COALESCE ( posicao_atual[direcao_graus], 0 ), "0" ) & ") scale(" & _esc & ")' opacity='" & _op & "'>"
+			                & "<title>" & COALESCE ( posicao_atual[voo], "sem identificação" ) & " · " & posicao_atual[companhia]
+			                & " · " & IF ( posicao_atual[em_solo], "em solo", FORMAT ( posicao_atual[altitude_m], "#,##0" ) & " m · "
+			                & FORMAT ( posicao_atual[velocidade_kmh], "#,##0" ) & " km/h" ) & "</title>"
+			                & _aviao & _cor & "'/></g>",
+			        ""
+			    )
+			
+			// --- rastros curtos de todos os avioes (ultimos 12 min)
+			VAR _rastro =
+			    CALCULATETABLE (
+			        fato_posicoes,
+			        REMOVEFILTERS ( fato_posicoes ),
+			        fato_posicoes[coleta_utc] >= _ultUtc - 12 / 1440,
+			        fato_posicoes[em_solo] = FALSE ()
+			    )
+			VAR _ids =
+			    SUMMARIZE ( _rastro, fato_posicoes[icao24], fato_posicoes[companhia], fato_posicoes[tipo_companhia] )
+			VAR _svgRastros =
+			    CONCATENATEX (
+			        _ids,
+			        VAR _id = fato_posicoes[icao24]
+			        VAR _cor =
+			            SWITCH (
+			                TRUE (),
+			                fato_posicoes[companhia] = "LATAM Brasil", "#f43f5e",
+			                fato_posicoes[companhia] = "Gol", "#fb923c",
+			                CONTAINSSTRING ( fato_posicoes[companhia], "Azul" ), "#38bdf8",
+			                fato_posicoes[tipo_companhia] = "Aviação geral", "#94a3b8",
+			                fato_posicoes[companhia] IN { "Sem identificação", "Outras" }, "#64748b",
+			                "#a78bfa"
+			            )
+			        VAR _pts =
+			            CONCATENATEX (
+			                FILTER ( _rastro, fato_posicoes[icao24] = _id ),
+			                SUBSTITUTE ( FORMAT ( ( fato_posicoes[longitude] + 74.2 ) * 10.1, "0.0" ), ",", "." ) & ","
+			                    & SUBSTITUTE ( FORMAT ( ( 5.4 - fato_posicoes[latitude] ) * 10.4, "0.0" ), ",", "." ),
+			                " ",
+			                fato_posicoes[coleta_utc], ASC
+			            )
+			        RETURN
+			            "<polyline points='" & _pts & "' fill='none' stroke='" & _cor
+			                & "' stroke-width='1.2' vector-effect='non-scaling-stroke' stroke-opacity='" & IF ( _temSel, ".12", ".45" ) & "'/>",
+			        ""
+			    )
+			
+			// --- voo selecionado: rastro longo + destaque
+			VAR _selTab =
+			    CALCULATETABLE (
+			        fato_posicoes,
+			        REMOVEFILTERS ( fato_posicoes ),
+			        fato_posicoes[icao24] = _sel,
+			        fato_posicoes[coleta_utc] >= _ultUtc - 3 / 24
+			    )
+			VAR _selPts =
+			    CONCATENATEX (
+			        _selTab,
+			        SUBSTITUTE ( FORMAT ( ( fato_posicoes[longitude] + 74.2 ) * 10.1, "0.0" ), ",", "." ) & ","
+			            & SUBSTITUTE ( FORMAT ( ( 5.4 - fato_posicoes[latitude] ) * 10.4, "0.0" ), ",", "." ),
+			        " ",
+			        fato_posicoes[coleta_utc], ASC
+			    )
+			VAR _svgSel =
+			    IF (
+			        _temSel,
+			        "<polyline points='" & _selPts & "' fill='none' stroke='#fb923c' stroke-width='2.2' stroke-dasharray='6 4' vector-effect='non-scaling-stroke'/>"
+			            & "<circle cx='" & SUBSTITUTE ( FORMAT ( _selX, "0.0" ), ",", "." ) & "' cy='" & SUBSTITUTE ( FORMAT ( _selY, "0.0" ), ",", "." )
+			            & "' r='" & SUBSTITUTE ( FORMAT ( 8 * _z, "0.00" ), ",", "." )
+			            & "' fill='#fb923c' fill-opacity='.18' stroke='#fb923c' stroke-width='1' vector-effect='non-scaling-stroke'/>"
+			    )
+			
+			// --- contorno (sem os aeroportos fixos) + aeroportos com tamanho ajustado ao zoom
+			VAR _base = [SVG Brasil Contorno]
+			VAR _contorno =
+			    SUBSTITUTE (
+			        LEFT ( _base, SEARCH ( "<circle", _base ) - 1 ),
+			        "stroke-width='.6'",
+			        "stroke-width='1' vector-effect='non-scaling-stroke'"
+			    )
+			VAR _aerop =
+			    DATATABLE (
+			        "Cod", STRING, "Lat", DOUBLE, "Lon", DOUBLE, "Principal", INTEGER,
+			        {
+			            { "GRU", -23.43, -46.47, 1 }, { "CGH", -23.63, -46.66, 0 }, { "VCP", -23.01, -47.13, 0 },
+			            { "GIG", -22.81, -43.25, 1 }, { "SDU", -22.91, -43.16, 0 }, { "BSB", -15.87, -47.92, 1 },
+			            { "CNF", -19.63, -43.97, 1 }, { "CWB", -25.53, -49.17, 1 }, { "POA", -29.99, -51.17, 1 },
+			            { "FLN", -27.67, -48.55, 0 }, { "SSA", -12.91, -38.33, 1 }, { "REC", -8.13, -34.92, 1 },
+			            { "FOR", -3.78, -38.53, 1 }, { "BEL", -1.38, -48.48, 1 }, { "MAO", -3.04, -60.05, 1 },
+			            { "GYN", -16.63, -49.22, 0 }, { "CGB", -15.65, -56.12, 0 }, { "VIX", -20.26, -40.29, 0 },
+			            { "NAT", -5.77, -35.37, 0 }
+			        }
+			    )
+			VAR _svgAerop =
+			    CONCATENATEX (
+			        FILTER ( _aerop, [Principal] = 1 || _vw <= 200 ),
+			        VAR _x = ( [Lon] + 74.2 ) * 10.1
+			        VAR _y = ( 5.4 - [Lat] ) * 10.4
+			        RETURN
+			            "<circle cx='" & SUBSTITUTE ( FORMAT ( _x, "0.0" ), ",", "." ) & "' cy='" & SUBSTITUTE ( FORMAT ( _y, "0.0" ), ",", "." )
+			                & "' r='" & SUBSTITUTE ( FORMAT ( 2.4 * _z, "0.00" ), ",", "." )
+			                & "' fill='none' stroke='#e2e8f0' stroke-opacity='.5' stroke-width='1' vector-effect='non-scaling-stroke'/>"
+			                & "<text x='" & SUBSTITUTE ( FORMAT ( _x + 4 * _z, "0.0" ), ",", "." ) & "' y='" & SUBSTITUTE ( FORMAT ( _y + 2 * _z, "0.0" ), ",", "." )
+			                & "' font-size='" & SUBSTITUTE ( FORMAT ( 5.5 * _z, "0.00" ), ",", "." )
+			                & "' fill='#cbd5e1' fill-opacity='.75' font-weight='600'>" & [Cod] & "</text>",
+			        ""
+			    )
+			
+			VAR _viewBox =
+			    SUBSTITUTE ( FORMAT ( _vx, "0.0" ), ",", "." ) & " " & SUBSTITUTE ( FORMAT ( _vy, "0.0" ), ",", "." ) & " "
+			        & SUBSTITUTE ( FORMAT ( _vw, "0.0" ), ",", "." ) & " " & SUBSTITUTE ( FORMAT ( _vw, "0.0" ), ",", "." )
+			VAR _titulo =
+			    IF (
+			        _temSel,
+			        "centralizado no voo selecionado",
+			        COALESCE ( _reg, "Brasil" )
+			    )
+			VAR _svg =
+			    "<svg viewBox='" & _viewBox & "' preserveAspectRatio='xMidYMid meet'>"
+			        & "<defs><radialGradient id='gl' cx='60%' cy='65%' r='60%'><stop offset='0' stop-color='#1d4ed8' stop-opacity='.28'/><stop offset='1' stop-color='#1d4ed8' stop-opacity='0'/></radialGradient></defs>"
+			        & "<ellipse cx='260' cy='270' rx='190' ry='160' fill='url(#gl)'/>"
+			        & _contorno & _svgAerop & _svgRastros & _svgSel & _svgAvioes & "</svg>"
+			RETURN
+			    "<div class='card map'><div class='ct'>Mapa ao vivo · " & _titulo & "</div>"
+			        & "<div class='sub'>cada avião aponta para a direção do voo · linhas = trajeto dos últimos 12 min · passe o mouse para detalhes"
+			        & IF ( _aproximado, " · aviões em cinza = em solo", "" ) & "</div>"
+			        & "<div class='buscas'><div class='busca'></div><div class='busca'></div></div>"
+			        & "<div class='leg'><span><i class='sw' style='background:#f43f5e'></i>LATAM</span><span><i class='sw' style='background:#fb923c'></i>Gol</span><span><i class='sw' style='background:#38bdf8'></i>Azul</span><span><i class='sw' style='background:#a78bfa'></i>Estrangeiras</span><span><i class='sw' style='background:#94a3b8'></i>Aviação geral</span></div>"
+			        & "<div class='mapbox'>" & _svg & "</div>"
+			        & [HTML Voo Selecionado]
+			        & "</div>"
+		displayFolder: HTML
+		lineageTag: bbc5c92c-e241-4980-b73b-b398750fb270
+
+	measure 'HTML Painel Voos' =
+			[HTML Estilo Voos]
+			    & "<div class='pg'>"
+			    & [HTML Cabecalho Voos]
+			    & "<div class='main'>"
+			    & "<div class='col' style='grid-template-rows:minmax(0,1.25fr) minmax(0,1fr)'>" & [HTML Companhias] & [HTML Fase Voo] & "</div>"
+			    & [HTML Mapa Voos]
+			    & "<div class='col' style='grid-template-rows:minmax(0,1fr) minmax(0,1fr)'>" & [HTML Serie Voos] & [HTML Mais Rapidos] & "</div>"
+			    & "</div>"
+			    & [HTML KPIs Voos]
+			    & "</div>"
+		displayFolder: HTML
+		lineageTag: af5fdc7d-cdd7-4c89-bf7b-959afe7acd33
+
+	/// 1 para posicoes dos ultimos 12 min (usar como filtro do visual Azure Maps: e 1)
+	measure 'Ponto Recente' =
+			VAR _ultUtc = CALCULATE ( MAX ( fato_posicoes[coleta_utc] ), REMOVEFILTERS ( fato_posicoes ) )
+			RETURN
+			    IF ( MAX ( fato_posicoes[coleta_utc] ) >= _ultUtc - 12 / 1440, 1 )
+		formatString: 0
+		displayFolder: Azure Maps
+		lineageTag: 47e23c78-8253-4b6c-bed3-e4a67d93ab67
+
+	/// Bolha maior na posicao atual, pequena no rastro
+	measure 'Tamanho Bolha' =
+			VAR _ultUtc = CALCULATE ( MAX ( fato_posicoes[coleta_utc] ), REMOVEFILTERS ( fato_posicoes ) )
+			RETURN
+			    IF ( MAX ( fato_posicoes[coleta_utc] ) = _ultUtc, 10, 1 )
+		formatString: 0
+		displayFolder: Azure Maps
+		lineageTag: 1ffbf6b5-0678-4fce-a578-25c295e37e8d
+
+	/// Card do mapa vazio para sobrepor o visual Azure Maps
+	measure 'HTML Mapa Moldura' =
+			"<div class='card map'><div class='ct'>Mapa ao vivo</div>"
+			    & "<div class='sub'>cada avião aponta para a direção do voo · cor = fase do voo · use o scroll para dar zoom e arraste para mover</div>"
+			    & "<div class='leg'><span><i class='sw' style='background:#38bdf8'></i>Cruzeiro</span><span><i class='sw' style='background:#f59e0b'></i>Descendo</span><span><i class='sw' style='background:#34d399'></i>Subindo</span><span><i class='sw' style='background:#64748b'></i>Em solo</span></div>"
+			    & "<div class='mapbox'></div></div>"
+		displayFolder: Azure Maps
+		lineageTag: 0500bb79-ad97-41e8-9a11-5a7628c99b69
+
+	/// Mesmo painel, com o centro livre para o visual Azure Maps
+	measure 'HTML Painel Voos Azure' =
+			[HTML Estilo Voos]
+			    & "<div class='pg'>"
+			    & [HTML Cabecalho Voos]
+			    & "<div class='main'>"
+			    & "<div class='col' style='grid-template-rows:minmax(0,1.25fr) minmax(0,1fr)'>" & [HTML Companhias] & [HTML Fase Voo] & "</div>"
+			    & [HTML Mapa Moldura]
+			    & "<div class='col' style='grid-template-rows:minmax(0,1fr) minmax(0,1fr)'>" & [HTML Serie Voos] & [HTML Mais Rapidos] & "</div>"
+			    & "</div>"
+			    & [HTML KPIs Voos]
+			    & "</div>"
+		displayFolder: Azure Maps
+		lineageTag: e9a2ee54-c2ca-432e-932c-a3c5e5473673
+
+	/// Tamanho fixo para o campo Tamanho do circulo do Icon Map Pro
+	measure 'Tamanho Circulo' = IF ( NOT ISEMPTY ( posicao_atual ), 1 )
+		formatString: 0
+		displayFolder: Icon Map
+		lineageTag: ebb558f2-df2c-4ba9-8f0f-c32495d311b5
+
+	/// SVG do aviao (data URI) girado pela direcao e colorido pela fase do voo (mesmas cores da rosca Fase do voo)
+	measure 'Icone Aviao' =
+			VAR _dir = COALESCE ( MAX ( posicao_atual[direcao_graus] ), 0 )
+			VAR _fase = SELECTEDVALUE ( posicao_atual[fase_voo] )
+			VAR _cor =
+			    SWITCH (
+			        _fase,
+			        "Cruzeiro", "#38bdf8",
+			        "Descendo", "#f59e0b",
+			        "Subindo", "#34d399",
+			        "Em solo", "#64748b",
+			        "#94a3b8"
+			    )
+			VAR _svg =
+			    "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='-6 -6 12 12'>"
+			        & "<path transform='rotate(" & FORMAT ( _dir, "0" ) & ")' d='M0 -5L1 -1.5L5 .7L5 1.7L1 .8L.7 3.5L2 4.6L2 5.2L0 4.6L-2 5.2L-2 4.6L-.7 3.5L-1 .8L-5 1.7L-5 .7L-1 -1.5Z' fill='"
+			        & _cor & "' stroke='#0b1023' stroke-width='.35'/></svg>"
+			// codifica para URL (data URI)
+			VAR _url =
+			    SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( SUBSTITUTE ( _svg,
+			        "%", "%25" ), "<", "%3C" ), ">", "%3E" ), "#", "%23" ), " ", "%20" )
+			RETURN
+			    IF ( NOT ISEMPTY ( posicao_atual ), "data:image/svg+xml;charset=utf-8," & _url )
+		displayFolder: Icon Map
+		lineageTag: 4e23ae8d-6266-4f38-83f4-29eb0b1fb778
+		dataCategory: ImageUrl
+
+	column coleta_utc
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 37519668-d4fe-4aba-b83b-3f07a56fa47f
+		summarizeBy: none
+		sourceColumn: coleta_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	column coleta_brt
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: f5b7848a-cd9d-482b-914e-4787a7919622
+		summarizeBy: none
+		sourceColumn: coleta_brt
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_coleta
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 46137c6f-cf96-4ca5-aba9-d7bb6e405d83
+		summarizeBy: none
+		sourceColumn: data_coleta
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column hora
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: c4cabdb2-d686-431d-97bf-701390409594
+		summarizeBy: sum
+		sourceColumn: hora
+
+		annotation SummarizationSetBy = Automatic
+
+	column icao24
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 0070e15b-2339-4a2b-8d27-3b32c33e5c7c
+		summarizeBy: none
+		sourceColumn: icao24
+
+		annotation SummarizationSetBy = Automatic
+
+	column voo
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: bc4d9e33-00f5-43a5-be0c-9644ccea0ebe
+		summarizeBy: none
+		sourceColumn: voo
+
+		annotation SummarizationSetBy = Automatic
+
+	column companhia
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: bb03095e-f403-450a-9ae0-68a3c812f6d5
+		summarizeBy: none
+		sourceColumn: companhia
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo_companhia
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: d071ca5c-28ef-443c-b326-e2d6e94387ce
+		summarizeBy: none
+		sourceColumn: tipo_companhia
+
+		annotation SummarizationSetBy = Automatic
+
+	column pais_origem
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: a48d1994-2c92-464b-9540-a4711ac2aef7
+		summarizeBy: none
+		sourceColumn: pais_origem
+
+		annotation SummarizationSetBy = Automatic
+
+	column latitude
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 2e7b7f92-d64e-4d4e-83a8-fa28dd646c2c
+		summarizeBy: sum
+		sourceColumn: latitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column longitude
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 78683832-07e5-4f1a-ad5a-7a7d1cf38c9c
+		summarizeBy: sum
+		sourceColumn: longitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column altitude_m
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 9763cb51-9bd2-4f38-a4e7-e50862bd0fb0
+		summarizeBy: sum
+		sourceColumn: altitude_m
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column velocidade_kmh
+		dataType: double
+		sourceProviderType: double
+		lineageTag: b56baff4-c153-4f58-adc1-cbfe8da83b52
+		summarizeBy: sum
+		sourceColumn: velocidade_kmh
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column direcao_graus
+		dataType: double
+		sourceProviderType: double
+		lineageTag: ffc3b22b-3b06-440c-a633-1480d61f6ae9
+		summarizeBy: sum
+		sourceColumn: direcao_graus
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column taxa_vertical_ms
+		dataType: double
+		sourceProviderType: double
+		lineageTag: e7aa97c4-121a-452a-ba4b-5bdb2d93449b
+		summarizeBy: sum
+		sourceColumn: taxa_vertical_ms
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column em_solo
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: a7764d14-5b9e-4ec1-b464-1339186eb90f
+		summarizeBy: none
+		sourceColumn: em_solo
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase_voo
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 3b29d36d-951b-47b0-a12f-58652e59666b
+		summarizeBy: none
+		sourceColumn: fase_voo
+
+		annotation SummarizationSetBy = Automatic
+
+	partition posicao_atual = m
+		mode: directQuery
+		source =
+				let
+				    Fonte = DatabricksMultiCloud.Catalogs("dbc-eb71337e-4cba.cloud.databricks.com", "/sql/1.0/warehouses/2acace36d690c6ad", [Catalog="workspace", Database="voos_gold", QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    posicao_atual_voos_gold_workspace_Table = Fonte{[Item="posicao_atual",Schema="voos_gold",Catalog="workspace",Kind="Table"]}[Data]
+				in
+				    posicao_atual_voos_gold_workspace_Table
+
+	annotation PBI_ResultType = Table
+

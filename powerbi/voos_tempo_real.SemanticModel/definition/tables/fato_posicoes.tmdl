@@ -1,0 +1,186 @@
+table fato_posicoes
+	lineageTag: bf7976e1-c1cb-4928-a725-7b49970af1f8
+
+	column coleta_utc
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: b9a968a2-e33e-4f55-948f-7786617ebb2d
+		summarizeBy: none
+		sourceColumn: coleta_utc
+
+		annotation SummarizationSetBy = Automatic
+
+	column coleta_brt
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: c7859a81-98ec-4ffc-bc84-883dd0b86018
+		summarizeBy: none
+		sourceColumn: coleta_brt
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_coleta
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 10b6592a-0c4d-4723-83da-1cd0783d3e44
+		summarizeBy: none
+		sourceColumn: data_coleta
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column hora
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 13f4f220-1c78-47eb-a1dd-7151e6e9ba77
+		summarizeBy: sum
+		sourceColumn: hora
+
+		annotation SummarizationSetBy = Automatic
+
+	column icao24
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 3fad2ef3-925d-4e08-a935-9f9ecf245dbf
+		summarizeBy: none
+		sourceColumn: icao24
+
+		annotation SummarizationSetBy = Automatic
+
+	column voo
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: dd467db8-ba6f-49f1-9c7a-2537943af701
+		summarizeBy: none
+		sourceColumn: voo
+
+		annotation SummarizationSetBy = Automatic
+
+	column companhia
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 1f6eaaef-1e83-4488-88f0-ba7d8d8d0a3c
+		summarizeBy: none
+		sourceColumn: companhia
+
+		annotation SummarizationSetBy = Automatic
+
+	column tipo_companhia
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 74d13922-deb6-4c83-8d29-9772f1a983d1
+		summarizeBy: none
+		sourceColumn: tipo_companhia
+
+		annotation SummarizationSetBy = Automatic
+
+	column pais_origem
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 0b289254-8126-48fb-b2af-9e3afd16145d
+		summarizeBy: none
+		sourceColumn: pais_origem
+
+		annotation SummarizationSetBy = Automatic
+
+	column latitude
+		dataType: double
+		sourceProviderType: double
+		lineageTag: b228cc7c-848b-4aa9-9827-28ecce4a3533
+		summarizeBy: sum
+		sourceColumn: latitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column longitude
+		dataType: double
+		sourceProviderType: double
+		lineageTag: b0afa1db-2416-4c46-aec4-408f7827d8ba
+		summarizeBy: sum
+		sourceColumn: longitude
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column altitude_m
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 13da2f7e-c22b-444c-a42e-809eae4c93e1
+		summarizeBy: sum
+		sourceColumn: altitude_m
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column velocidade_kmh
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 50ebdbfc-6832-40c6-948f-59a88ab9ce0b
+		summarizeBy: sum
+		sourceColumn: velocidade_kmh
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column direcao_graus
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 6032a695-749a-4172-9746-fc95d569c0f1
+		summarizeBy: sum
+		sourceColumn: direcao_graus
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column taxa_vertical_ms
+		dataType: double
+		sourceProviderType: double
+		lineageTag: e8300aa3-6d24-4ba7-ae60-52b34f063953
+		summarizeBy: sum
+		sourceColumn: taxa_vertical_ms
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column em_solo
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 1ff621df-d6e6-4702-bfc1-a38f0f4efffc
+		summarizeBy: none
+		sourceColumn: em_solo
+
+		annotation SummarizationSetBy = Automatic
+
+	column fase_voo
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: ed59e5ce-39a3-455a-8eae-9f141643b841
+		summarizeBy: none
+		sourceColumn: fase_voo
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fato_posicoes = m
+		mode: directQuery
+		source =
+				let
+				    Fonte = DatabricksMultiCloud.Catalogs("dbc-eb71337e-4cba.cloud.databricks.com", "/sql/1.0/warehouses/2acace36d690c6ad", [Catalog="workspace", Database="voos_gold", QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0", Protocol=null]),
+				    fato_posicoes_voos_gold_workspace_Table = Fonte{[Item="fato_posicoes",Schema="voos_gold",Catalog="workspace",Kind="Table"]}[Data]
+				in
+				    fato_posicoes_voos_gold_workspace_Table
+
+	annotation PBI_ResultType = Table
+

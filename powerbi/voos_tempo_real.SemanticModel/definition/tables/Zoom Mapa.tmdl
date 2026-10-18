@@ -1,0 +1,52 @@
+table 'Zoom Mapa'
+	lineageTag: b3c5bbcf-ea72-4935-9f2a-73d57cf568dc
+
+	column Regiao
+		lineageTag: 3cf4aa61-bff4-4fb1-a905-cf41963ec65b
+		isNameInferred
+		sourceColumn: [Regiao]
+		sortByColumn: Ordem
+
+	column Ordem
+		isHidden
+		lineageTag: 679aab5f-bc33-477d-af56-26a688b72417
+		isNameInferred
+		sourceColumn: [Ordem]
+
+	column VX
+		isHidden
+		lineageTag: 23378bf8-1227-4f18-b77f-b7e7dcd8a0bf
+		isNameInferred
+		sourceColumn: [VX]
+
+	column VY
+		isHidden
+		lineageTag: a7f34bbf-b4e6-400a-9a24-040d0dff1436
+		isNameInferred
+		sourceColumn: [VY]
+
+	column VW
+		isHidden
+		lineageTag: c26281e1-a789-4074-8809-08f94ffe1e15
+		isNameInferred
+		sourceColumn: [VW]
+
+	partition 'Zoom Mapa' = calculated
+		mode: import
+		source =
+				DATATABLE (
+				    "Regiao", STRING, "Ordem", INTEGER, "VX", DOUBLE, "VY", DOUBLE, "VW", DOUBLE,
+				    {
+				        { "Brasil", 1, -10, -5, 420 },
+				        { "Sudeste", 2, 206, 187, 150 },
+				        { "Sul", 3, 150, 284, 130 },
+				        { "Nordeste", 4, 235, 65, 185 },
+				        { "Centro-Oeste", 5, 116, 129, 180 },
+				        { "Norte", 6, -2, -45, 290 },
+				        { "Eixo Rio-São Paulo", 7, 251, 251, 90 },
+				        { "São Paulo (GRU/CGH)", 8, 250, 270, 60 },
+				        { "Rio de Janeiro (GIG/SDU)", 9, 283, 263, 60 },
+				        { "Brasília (BSB)", 10, 235, 191, 60 }
+				    }
+				)
+
