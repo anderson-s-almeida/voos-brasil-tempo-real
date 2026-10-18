@@ -1,0 +1,8 @@
+   .env
+   __pycache__/
+   dados/
+   amostra_*.json
+   credentials.json
+   *.pbix
+   **/.pbi/localSettings.json
+   **/.pbi/cache.abf
